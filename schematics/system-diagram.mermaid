@@ -1,0 +1,89 @@
+graph TB
+    subgraph Body
+        USB["USB Type-C Port\nCharging & Programming"]
+        ESP["M5Stamp C3U\nESP32-C3 Controller"]
+        TIMER["StampTimerPower\nTP4057 + BM8563 RTC"]
+        BAT["LiPo Battery\n3.7V 1000mAh"]
+        SPEAK["28mm Speaker\nMAX98357A Amp"]
+        
+        %% Power filtering capacitors
+        C1["100µF\nInput Filter"]
+        C2["100µF\nOutput Filter"]
+        C3["1µF\nOutput Filter"]
+        C4["0.1µF\nOutput Filter"]
+        C5["100µF\nMotor Filter"]
+        
+        %% Motor control circuit components
+        VIB["Vibration Motor\n3-6V DC"]
+        TR["2N2222\nNPN Transistor"]
+        RB["1kΩ Base\nResistor"]
+        D1["Protection\nDiode"]
+        
+        %% Battery monitoring components
+        R1["120kΩ\nVoltage Divider"]
+        R2["120kΩ\nVoltage Divider"]
+        
+        SERVO["Servo Motor\nNodding Motion"]
+        MPOGO["Male Pogo Connector\n4 pins"]
+    end
+    subgraph Head
+        LED1["Left Eye Ring\n8x WS2812B\n5V Operation"]
+        LED2["Right Eye Ring\n8x WS2812B\n5V Operation"]
+        FPOGO["Female Pogo Connector\n4 pins"]
+    end
+    
+    %% Power Connections with Filtering
+    USB -->|5V Input| TIMER
+    BAT --> C1
+    C1 --> TIMER
+    TIMER -->|3.3V| ESP
+    TIMER -->|5V Boost| C2
+    C2 --> C3
+    C3 --> C4
+    C4 --> SPEAK
+    TIMER -->|5V Boost| MPOGO
+    TIMER -->|5V Boost| SERVO
+    TIMER -->|BAT_OUT 3.7V| C5
+    C5 --> VIB
+    MPOGO -->|5V & GND| FPOGO
+    FPOGO -->|5V| LED1
+    FPOGO -->|5V| LED2
+    
+    %% Motor Control Circuit
+    ESP -->|GPIO4 3.3V Control| RB
+    RB --> TR
+    TR -->|Collector| VIB
+    D1 -->|Cathode| VIB
+    VIB -->|Anode| D1
+    
+    %% Battery Monitoring Circuit
+    TIMER -->|BAT_OUT 3.7V| R1
+    R1 -->|1.85V| R2
+    R2 -->|GND| TIMER
+    R1 -->|Voltage Divided Signal| ESP
+    ESP -->|GPIO0 ADC| R1
+    
+    %% Other Data & Control Connections
+    ESP -->|GPIO2 LED Data| MPOGO
+    ESP -->|GPIO10 Servo PWM| SERVO
+    ESP -->|I2S: GPIO6,7,8| SPEAK
+    ESP -->|I2C: GPIO18,19| TIMER
+    ESP -->|GPIO5 Head Detect| MPOGO
+    
+    %% Pogo Pin Connections
+    MPOGO -.->|"Pin 1: 5V\nPin 2: GND\nPin 3: LED Data\nPin 4: Head Detect"| FPOGO
+    
+    classDef default fill:#f9f,stroke:#333,stroke-width:2px
+    classDef power fill:#f96,stroke:#333,stroke-width:2px
+    classDef component fill:#9cf,stroke:#333,stroke-width:2px
+    classDef battery fill:#6f6,stroke:#333,stroke-width:2px
+    classDef usb fill:#9f9,stroke:#333,stroke-width:2px
+    classDef protection fill:#ff9,stroke:#333,stroke-width:2px
+    classDef capacitor fill:#fcf,stroke:#333,stroke-width:2px
+    
+    class USB usb
+    class TIMER power
+    class BAT battery
+    class LED1,LED2,SPEAK,VIB,ESP,SERVO component
+    class TR,D1,RB,R1,R2 protection
+    class C1,C2,C3,C4,C5 capacitor
