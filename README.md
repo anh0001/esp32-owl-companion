@@ -2,7 +2,7 @@
 
 An interactive owl statue project powered by ESP32-C3, featuring motion, light, sound, and haptic feedback.
 
-![Owl Companion](docs/media/images/owl-companion.jpg)
+![Owl Companion Animation](docs/media/images/owl-animation.gif)
 
 ## Overview
 
