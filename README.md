@@ -151,7 +151,7 @@ See the [Build Plan](docs/planning/build_plan.md) for detailed assembly instruct
 
 1. Clone this repository
 ```bash
-git clone https://github.com/yourusername/esp32-owl-companion.git
+git clone https://github.com/anh0001/esp32-owl-companion.git
 ```
 
 2. Open the firmware project in Arduino IDE or PlatformIO
