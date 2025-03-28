@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const GardenWatchClient = () => {
@@ -12,62 +12,8 @@ const GardenWatchClient = () => {
   const [error, setError] = useState(null);
   const [owlIp, setOwlIp] = useState('192.168.1.100'); // Default IP
   
-  // Function to fetch data from the ESP32 server
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // For demo purposes, we'll use sample data to avoid requiring the actual hardware
-      // In a real implementation, you would uncomment these and use the actual API endpoints
-      
-      // const activityResponse = await fetch(`http://${owlIp}/api/data/activity`);
-      // const activityData = await activityResponse.json();
-      // setGardenActivityData(activityData);
-      
-      // const patternsResponse = await fetch(`http://${owlIp}/api/data/daily-patterns`);
-      // const patternsData = await patternsResponse.json();
-      // setDailyPatterns(patternsData);
-      
-      // const weeklyResponse = await fetch(`http://${owlIp}/api/data/weekly-tasks`);
-      // const weeklyData = await weeklyResponse.json();
-      // setWeeklyTaskData(weeklyData);
-      
-      // const deviationResponse = await fetch(`http://${owlIp}/api/data/deviation`);
-      // const deviationData = await deviationResponse.json();
-      // setDeviationData(deviationData);
-      
-      // const reminderResponse = await fetch(`http://${owlIp}/api/data/reminders`);
-      // const reminderData = await reminderResponse.json();
-      // setReminderData(reminderData);
-      
-      // For demo, we'll generate sample data similar to what the API would return
-      setGardenActivityData(generateGardenActivityData());
-      setDailyPatterns({
-        healthy: generateDailyActivityData(true),
-        current: generateDailyActivityData(false)
-      });
-      setWeeklyTaskData({
-        healthy: generateWeeklyGardeningData(true),
-        current: generateWeeklyGardeningData(false)
-      });
-      setDeviationData(generateGardenActivityData().map(item => ({
-        day: item.day,
-        deviationScore: item.deviationScore,
-        alert: item.alert
-      })));
-      setReminderData(generateReminderData());
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('Failed to fetch data from the Garden Watch system. Please check the connection and try again.');
-      setLoading(false);
-    }
-  };
-  
-  // Sample data generation function (for demo purposes)
-  const generateGardenActivityData = () => {
+  // Wrap sample data generation functions with useCallback
+  const generateGardenActivityData = useCallback(() => {
     const data = [];
     for (let day = 1; day <= 28; day++) {
       const week = Math.ceil(day / 7);
@@ -104,9 +50,9 @@ const GardenWatchClient = () => {
       });
     }
     return data;
-  };
+  }, []);
 
-  const generateDailyActivityData = (isHealthy) => {
+  const generateDailyActivityData = useCallback((isHealthy) => {
     const hours = Array.from({ length: 24 }, (_, i) => i);
     
     return hours.map(hour => {
@@ -140,9 +86,9 @@ const GardenWatchClient = () => {
           (hour >= 17 && hour <= 19) ? 75 : 20
       };
     });
-  };
+  }, []);
 
-  const generateWeeklyGardeningData = (isHealthy) => {
+  const generateWeeklyGardeningData = useCallback((isHealthy) => {
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     
     return weekdays.map(day => {
@@ -162,9 +108,9 @@ const GardenWatchClient = () => {
         gardenTime
       };
     });
-  };
+  }, []);
 
-  const generateReminderData = () => {
+  const generateReminderData = useCallback(() => {
     const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
     return weeks.map(week => {
       const weekNum = parseInt(week.split(' ')[1]);
@@ -181,7 +127,62 @@ const GardenWatchClient = () => {
         alert: responseTime > 30
       };
     });
-  };
+  }, []);
+
+  // Refactor fetchData with useCallback and include data generator dependencies
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // For demo purposes, we'll use sample data to avoid requiring the actual hardware
+      // In a real implementation, you would uncomment these and use the actual API endpoints
+      
+      // const activityResponse = await fetch(`http://${owlIp}/api/data/activity`);
+      // const activityData = await activityResponse.json();
+      // setGardenActivityData(activityData);
+      
+      // const patternsResponse = await fetch(`http://${owlIp}/api/data/daily-patterns`);
+      // const patternsData = await patternsResponse.json();
+      // setDailyPatterns(patternsData);
+      
+      // const weeklyResponse = await fetch(`http://${owlIp}/api/data/weekly-tasks`);
+      // const weeklyData = await weeklyResponse.json();
+      // setWeeklyTaskData(weeklyData);
+      
+      // const deviationResponse = await fetch(`http://${owlIp}/api/data/deviation`);
+      // const deviationData = await deviationResponse.json();
+      // setDeviationData(deviationData);
+      
+      // const reminderResponse = await fetch(`http://${owlIp}/api/data/reminders`);
+      // const reminderData = await reminderResponse.json();
+      // setReminderData(reminderData);
+      
+      // For demo, we'll generate sample data similar to what the API would return
+      const activityData = generateGardenActivityData();
+      setGardenActivityData(activityData);
+      setDailyPatterns({
+        healthy: generateDailyActivityData(true),
+        current: generateDailyActivityData(false)
+      });
+      setWeeklyTaskData({
+        healthy: generateWeeklyGardeningData(true),
+        current: generateWeeklyGardeningData(false)
+      });
+      setDeviationData(activityData.map(item => ({
+        day: item.day,
+        deviationScore: item.deviationScore,
+        alert: item.alert
+      })));
+      setReminderData(generateReminderData());
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to fetch data from the Garden Watch system. Please check the connection and try again.');
+      setLoading(false);
+    }
+  }, [generateGardenActivityData, generateDailyActivityData, generateWeeklyGardeningData, generateReminderData]);
   
   // Fetch data on component mount and when owl IP changes
   useEffect(() => {
@@ -189,7 +190,7 @@ const GardenWatchClient = () => {
     // In a real app, you might want to set up a refresh interval
     // const interval = setInterval(fetchData, 60000); // Refresh every minute
     // return () => clearInterval(interval);
-  }, [owlIp]);
+  }, [fetchData, owlIp]);
   
   // Handle form submission for IP address
   const handleSubmit = (e) => {
@@ -212,7 +213,7 @@ const GardenWatchClient = () => {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
         <strong className="font-bold">Error!</strong>
-        <span className="block sm:inline"> {error}</span>
+        <span class="block sm:inline"> {error}</span>
       </div>
     );
   }
