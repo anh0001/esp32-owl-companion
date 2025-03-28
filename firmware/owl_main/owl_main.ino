@@ -65,6 +65,7 @@
 #define BATT_MED 1.85   // 3.7V
 #define BATT_LOW 1.7    // 3.4V
 
+#define DISABLE_SERVO 1  // Set to 1 to disable servo
 // Servo positions and timing
 #define SERVO_UP 80     // Upper position (head up/released)
 #define SERVO_DOWN 60   // Lower position (head nodding down)
@@ -301,16 +302,22 @@ void setup() {
   // Initialize ADC
   analogReadResolution(12);
   
-  // Initialize Servo
-  ESP32PWM::allocateTimer(0);
-  nodServo.setPeriodHertz(50);
-  nodServo.attach(SERVO_PIN, 500, 2400);
-
+  // Initialize Servo only if enabled
+  #if !DISABLE_SERVO
+    ESP32PWM::allocateTimer(0);
+    nodServo.setPeriodHertz(50);
+    nodServo.attach(SERVO_PIN, 500, 2400);
+  #else
+    Serial.println("Servo disabled.");
+  #endif
+  
   // Initialize I2S
   initI2S();
     
-  // Initial position
-  nodServo.write(SERVO_UP);
+  // Initial position if servo enabled
+  #if !DISABLE_SERVO
+    nodServo.write(SERVO_UP);
+  #endif
   delay(1000);
 
   // Uncomment to test playing the embedded sound:
@@ -371,7 +378,9 @@ void loop() {
           }
         }
         
-        nodServo.write(currentPos);
+        #if !DISABLE_SERVO
+          nodServo.write(currentPos);
+        #endif
       }
       
       // Check for events and update motor
