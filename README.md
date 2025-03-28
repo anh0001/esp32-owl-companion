@@ -90,7 +90,7 @@ GPIO10 → Servo Control
 
 ## API Endpoints
 
-The owl robot provides a RESTful API for monitoring and sensor data integration:
+The owl robot provides a comprehensive RESTful API for controlling all aspects of its functionality:
 
 ### API Endpoint Overview
 
@@ -99,25 +99,15 @@ The owl robot provides a RESTful API for monitoring and sensor data integration:
 | `/` | GET | Root endpoint that confirms server is running |
 | `/api/status` | GET | Returns owl robot status including battery level and alert state |
 | `/api/hourly-data` | POST | Receives hourly activity data from sensor modules |
+| `/api/control/motion` | POST | Controls the nodding motion of the owl's head |
+| `/api/control/vibration` | POST | Activates the vibration motor for haptic feedback |
+| `/api/control/audio` | POST | Triggers sound playback |
+| `/api/control/led` | POST | Controls the LED color |
+| `/api/action` | POST | Activates the owl's action mode directly |
 
-### Testing the API
+### Detailed API Reference
 
-You can test the API endpoints using curl or other HTTP tools. Below are examples using curl:
-
-#### 1. Testing Root Endpoint
-
-Verify the web server is running:
-
-```bash
-curl http://[OWL_IP_ADDRESS]/
-```
-
-Example response:
-```
-Garden Watch Owl Robot
-```
-
-#### 2. Testing Status Endpoint
+#### 1. Status Endpoint
 
 Get the current status of the owl robot:
 
@@ -135,9 +125,9 @@ Example response:
 }
 ```
 
-#### 3. Testing Hourly Data Endpoint
+#### 2. Hourly Data Endpoint
 
-Send simulated hourly activity data:
+Send hourly activity data:
 
 ```bash
 curl -X POST \
@@ -155,10 +145,7 @@ curl -X POST \
   }'
 ```
 
-#### Hourly Data Payload Fields Description
-
-The `/api/hourly-data` endpoint accepts a JSON payload with the following fields:
-
+Parameters:
 | Field | Type | Description |
 |-------|------|-------------|
 | `timestamp` | string | ISO formatted date and time when the hour period started |
@@ -170,22 +157,125 @@ The `/api/hourly-data` endpoint accepts a JSON payload with the following fields
 | `avgDetectionPoints` | float | Average number of detection points across all readings |
 | `presenceRatio` | float | Ratio of readings with detected presence to total readings (0.0-1.0) |
 
-Example response:
+#### 3. Motion Control Endpoint
+
+Control the nodding motion:
+
+```bash
+curl -X POST \
+  http://[OWL_IP_ADDRESS]/api/control/motion \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "angle": 15,
+    "duration": 1000,
+    "immediate": true
+  }'
+```
+
+Parameters:
+- `angle`: Nodding angle in degrees (1-30)
+- `duration`: Duration to hold the position in milliseconds
+- `immediate`: If true, moves immediately; if false, uses smooth animation
+
+#### 4. Vibration Control Endpoint
+
+Activate haptic feedback:
+
+```bash
+curl -X POST \
+  http://[OWL_IP_ADDRESS]/api/control/vibration \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "intensity": 50,
+    "duration": 500
+  }'
+```
+
+Parameters:
+- `intensity`: Vibration intensity (1-100)
+- `duration`: Duration in milliseconds (50-2000)
+
+#### 5. Audio Control Endpoint
+
+Play sounds:
+
+```bash
+curl -X POST \
+  http://[OWL_IP_ADDRESS]/api/control/audio \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "pattern": "hoot",
+    "volume": 75
+  }'
+```
+
+Parameters:
+- `pattern`: Sound pattern to play ("hoot" or "reminder")
+- `volume`: Volume level (1-100)
+
+#### 6. LED Control Endpoint
+
+Control the LED color:
+
+```bash
+curl -X POST \
+  http://[OWL_IP_ADDRESS]/api/control/led \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "r": 255,
+    "g": 0,
+    "b": 0,
+    "w": 0,
+    "duration": 5000
+  }'
+```
+
+Parameters:
+- `r`, `g`, `b`, `w`: RGB+W color values (0-255)
+- `duration`: Duration in milliseconds (0 for indefinite)
+
+#### 7. Action Mode Endpoint
+
+Trigger action mode directly:
+
+```bash
+curl -X POST http://[OWL_IP_ADDRESS]/api/action
+```
+
+Response:
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "message": "Action mode activated"
 }
 ```
 
-### API Troubleshooting
+### Integration Examples
 
-If you encounter issues testing the API:
+Here's a simple Python script to trigger various owl behaviors:
 
-1. **Verify connectivity**: Ensure both your computer and the owl robot are on the same network
-2. **Check logs**: Monitor the Serial output for error messages
-3. **Confirm IP address**: Make sure you're using the correct IP address (printed at startup)
-4. **Firewall issues**: Check if a firewall is blocking the connection
-5. **Reset the device**: Try restarting the owl robot if the web server becomes unresponsive
+```python
+import requests
+import json
+import time
+
+OWL_IP = "192.168.1.100"  # Replace with your owl's IP address
+
+# Play a sound
+requests.post(f"http://{OWL_IP}/api/control/audio", 
+              json={"pattern": "hoot", "volume": 75})
+
+# Wait 1 second
+time.sleep(1)
+
+# Make the owl nod
+requests.post(f"http://{OWL_IP}/api/control/motion", 
+              json={"angle": 15, "duration": 1000})
+
+# Set LED to blue
+requests.post(f"http://{OWL_IP}/api/control/led", 
+              json={"r": 0, "g": 0, "b": 255, "w": 0, "duration": 3000})
+```
 
 ## Getting Started
 

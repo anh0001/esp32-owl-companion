@@ -1,41 +1,3 @@
-/*
-  *****************************************************************************************
-  * HTTP Control Mechanism for Owl Motor
-  *
-  * This code integrates HTTP-based remote configuration to control the owl motor's action
-  * mode. It works as follows:
-  *
-  * 1. GET Request – Retrieve Flag Status:
-  *    - URL: http://54.250.108.126/getConfig.php?configKey=owl_motor
-  *    - The device periodically (every 5 seconds, as defined by HTTP_CHECK_INTERVAL)
-  *      sends an HTTP GET request to the above URL to check the current flag status.
-  *    - The server responds with a JSON payload containing a "value" field.
-  *      If the "value" equals "true", the device interprets it as a trigger to activate
-  *      the owl motor action mode.
-  *
-  * 2. Action Mode Activation:
-  *    - Upon receiving a "true" flag, the device sets an internal variable (performAction)
-  *      to true and begins the corresponding movement and behavior sequences (nodding, LED updates,
-  *      sound playback, etc.) for a predetermined duration.
-  *
-  * 3. Resetting the Flag:
-  *    - Immediately after detecting the flag set to "true", the device issues another HTTP GET
-  *      request to reset the flag:
-  *      URL: http://54.250.108.126/setConfig.php?configKey=owl_motor&configValue=false
-  *    - This ensures that the action mode is triggered only once per external activation.
-  *
-  * 4. External Activation:
-  *    - To manually trigger the action mode from an external system, the flag can be set to true by
-  *      sending an HTTP GET request to:
-  *      URL: http://54.250.108.126/setConfig.php?configKey=owl_motor&configValue=true
-  *
-  * Overall, this HTTP-based configuration allows remote and dynamic control over the device’s behavior,
-  * enabling a flexible response to external events. The use of JSON parsing (via ArduinoJson) ensures that
-  * the configuration payload is correctly interpreted, and the immediate flag reset prevents repetitive triggers.
-  *
-  *****************************************************************************************
-*/
-
 #include <Adafruit_NeoPixel.h>
 #include <ESP32Servo.h>
 #include "driver/i2s.h"
@@ -254,6 +216,10 @@ void handleHourlyData() {
   }
 }
 
+// Global timer variables for vibration and LED operations
+unsigned long vibrationEndTime = 0;
+unsigned long ledResetTime = 0;
+
 void setupServer() {
   server.on("/", HTTP_GET, []() {
     server.send(200, "text/plain", "Garden Watch Owl Robot");
@@ -266,6 +232,118 @@ void setupServer() {
     status += "\"alertActive\": " + String(performAction ? "true" : "false") + " }";
     server.send(200, "application/json", status);
   });
+
+  // NEW: Control the servo motor (nodding)
+  server.on("/api/control/motion", HTTP_POST, []() {
+    if (server.hasArg("plain")) {
+      StaticJsonDocument<128> doc;
+      DeserializationError error = deserializeJson(doc, server.arg("plain"));
+      if (!error) {
+        int angle = doc["angle"] | 0;
+        int duration = doc["duration"] | 1000;
+        bool immediate = doc["immediate"] | false;
+        if (angle > 0 && angle <= 30) {
+          #if !DISABLE_SERVO
+            if (immediate) {
+              nodServo.write(SERVO_UP - angle);
+              delay(duration);
+              nodServo.write(SERVO_UP);
+            } else {
+              nodding = true;
+              currentPos = SERVO_UP;
+              lastNodStart = millis();
+            }
+          #endif
+          server.send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+          server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid angle\"}");
+        }
+      } else {
+        server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+      }
+    } else {
+      server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"No data received\"}");
+    }
+  });
+
+  // NEW: Control the vibration motor
+  server.on("/api/control/vibration", HTTP_POST, []() {
+    if (server.hasArg("plain")) {
+      StaticJsonDocument<128> doc;
+      DeserializationError error = deserializeJson(doc, server.arg("plain"));
+      if (!error) {
+        int intensity = doc["intensity"] | 50;  // Intensity not used in current implementation
+        int duration = doc["duration"] | 500;
+        float voltage = getBatteryVoltage();
+        if (voltage >= VOLTAGE_THRESHOLD) {
+          digitalWrite(MOTOR_PIN, HIGH);
+          vibrationEndTime = millis() + duration;  // Set timer to disable vibration
+          server.send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+          server.send(200, "application/json", "{\"status\":\"low_battery\",\"message\":\"Battery too low for vibration\"}");
+        }
+      } else {
+        server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+      }
+    } else {
+      server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"No data received\"}");
+    }
+  });
+
+  // NEW: Control audio playback
+  server.on("/api/control/audio", HTTP_POST, []() {
+    if (server.hasArg("plain")) {
+      StaticJsonDocument<128> doc;
+      DeserializationError error = deserializeJson(doc, server.arg("plain"));
+      if (!error) {
+        String pattern = doc["pattern"].as<String>();
+        int volume = doc["volume"] | 75;  // Volume not used in current implementation
+        if (pattern == "hoot" || pattern == "reminder") {
+          playOwlSound();
+          server.send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+          server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Unknown sound pattern\"}");
+        }
+      } else {
+        server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+      }
+    } else {
+      server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"No data received\"}");
+    }
+  });
+
+  // NEW: Control LED color
+  server.on("/api/control/led", HTTP_POST, []() {
+    if (server.hasArg("plain")) {
+      StaticJsonDocument<128> doc;
+      DeserializationError error = deserializeJson(doc, server.arg("plain"));
+      if (!error) {
+        int r = doc["r"] | 0;
+        int g = doc["g"] | 0;
+        int b = doc["b"] | 0;
+        int w = doc["w"] | 0;
+        int duration = doc["duration"] | 0;  // 0 means indefinite
+        led.setPixelColor(0, led.Color(r, g, b, w));
+        led.show();
+        if (duration > 0) {
+          ledResetTime = millis() + duration;
+        }
+        server.send(200, "application/json", "{\"status\":\"ok\"}");
+      } else {
+        server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+      }
+    } else {
+      server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"No data received\"}");
+    }
+  });
+
+  // NEW: Trigger action mode directly
+  server.on("/api/action", HTTP_POST, []() {
+    performAction = true;
+    actionStartTime = millis();
+    server.send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Action mode activated\"}");
+  });
+
   server.begin();
   Serial.println("HTTP server started");
 }
@@ -492,6 +570,16 @@ void loop() {
       performAction = false;
       Serial.println("Action mode deactivated.");
     }
+  }
+  
+  // NEW: Check for pending timer operations in loop
+  if (vibrationEndTime > 0 && currentTime >= vibrationEndTime) {
+    digitalWrite(MOTOR_PIN, LOW);
+    vibrationEndTime = 0;
+  }
+  if (ledResetTime > 0 && currentTime >= ledResetTime) {
+    updateBatteryLED();
+    ledResetTime = 0;
   }
   
   // Optionally, add idle behavior if not in action mode
