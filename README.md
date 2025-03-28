@@ -2,13 +2,17 @@
 
 An interactive owl statue project powered by ESP32-C3, featuring motion, light, sound, and haptic feedback.
 
-![Owl Companion Animation](docs/media/images/owl-animation.gif)
+<p align="center">
+   <img src="docs/media/images/owl-animation.gif" alt="Owl Companion Animation" />
+</p>
 
 ## Garden Watch Visualization
 
 The Garden Watch system monitors garden activity patterns to detect potential health concerns.
 
-<img src="docs/media/images/garden-watch-front.png" alt="Garden Watch Front Garden Activity Monitoring" width="50%" />
+<p align="center">
+   <img src="docs/media/images/garden-watch-front.png" alt="Garden Watch Front Garden Activity Monitoring" width="40%" />
+</p>
 
 ## Overview
 
