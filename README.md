@@ -104,6 +104,11 @@ The owl robot provides a comprehensive RESTful API for controlling all aspects o
 | `/api/control/audio` | POST | Triggers sound playback |
 | `/api/control/led` | POST | Controls the LED color |
 | `/api/action` | POST | Activates the owl's action mode directly |
+| `/api/data/activity` | GET | Returns garden activity data with baseline and deviation analysis |
+| `/api/data/daily-patterns` | GET | Returns daily activity pattern data for healthy vs. current behavior |
+| `/api/data/weekly-tasks` | GET | Returns weekly garden task completion data |
+| `/api/data/deviation` | GET | Returns detailed deviation score analysis |
+| `/api/data/reminders` | GET | Returns data on response times to garden care reminders |
 
 ### Detailed API Reference
 
@@ -250,6 +255,153 @@ Response:
 }
 ```
 
+#### 8. Garden Activity Data Endpoint
+
+Get garden activity metrics:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/data/activity
+```
+
+Example response (abbreviated):
+```json
+[
+  {
+    "day": "Day 1",
+    "actualActivity": 75,
+    "baselineActivity": 80,
+    "deviationScore": 0.25,
+    "alert": false
+  },
+  {
+    "day": "Day 2",
+    "actualActivity": 78,
+    "baselineActivity": 80,
+    "deviationScore": 0.33,
+    "alert": false
+  },
+  ... additional days ...
+]
+```
+
+#### 9. Daily Activity Patterns Endpoint
+
+Get daily activity pattern data:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/data/daily-patterns
+```
+
+Example response (abbreviated):
+```json
+{
+  "healthy": [
+    {
+      "hour": "0:00",
+      "activity": 5
+    },
+    ... additional hours ...
+  ],
+  "current": [
+    {
+      "hour": "0:00",
+      "activity": 20,
+      "expectedActivity": 5
+    },
+    ... additional hours ...
+  ]
+}
+```
+
+#### 10. Weekly Task Completion Endpoint
+
+Get weekly garden task completion data:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/data/weekly-tasks
+```
+
+Example response (abbreviated):
+```json
+{
+  "healthy": [
+    {
+      "day": "Mon",
+      "tasksCompleted": 5,
+      "gardenTime": 45
+    },
+    ... additional days ...
+  ],
+  "current": [
+    {
+      "day": "Mon",
+      "tasksCompleted": 1,
+      "gardenTime": 15
+    },
+    ... additional days ...
+  ]
+}
+```
+
+#### 11. Deviation Score Endpoint
+
+Get detailed deviation score analysis:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/data/deviation
+```
+
+Example response (abbreviated):
+```json
+[
+  {
+    "day": "Day 1",
+    "deviationScore": 0.25,
+    "alert": false
+  },
+  {
+    "day": "Day 2",
+    "deviationScore": 0.33,
+    "alert": false
+  },
+  ... additional days ...
+]
+```
+
+#### 12. Reminder Response Endpoint
+
+Get response time data for garden care reminders:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/data/reminders
+```
+
+Example response:
+```json
+[
+  {
+    "week": "Week 1",
+    "responseTime": 12,
+    "alert": false
+  },
+  {
+    "week": "Week 2",
+    "responseTime": 15,
+    "alert": false
+  },
+  {
+    "week": "Week 3",
+    "responseTime": 35,
+    "alert": true
+  },
+  {
+    "week": "Week 4",
+    "responseTime": 42,
+    "alert": true
+  }
+]
+```
+
 ### Integration Examples
 
 Here's a simple Python script to trigger various owl behaviors:
@@ -277,132 +429,50 @@ requests.post(f"http://{OWL_IP}/api/control/led",
               json={"r": 0, "g": 0, "b": 255, "w": 0, "duration": 3000})
 ```
 
-## Getting Started
+### React Client Integration Example
 
-### Prerequisites
+Here's a React example of displaying the garden activity data:
 
-- Arduino IDE or PlatformIO
-- ESP32 board support
-- Required libraries:
-  - FastLED or NeoPixel for WS2812B control
-  - ESP32 I2S Audio
-  - Servo library
-  - ESP32 RTC libraries
-  - ESP32 WiFi libraries
-  - ArduinoJson (for HTTP responses)
+```javascript
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-### Hardware Assembly
+function GardenActivityChart() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const owlIp = "192.168.1.100"; // Replace with your owl's IP
+    
+    axios.get(`http://${owlIp}/api/data/activity`)
+      .then(response => {
+        setData(response.data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+      });
+  }, []);
+  
+  if (loading) return <div>Loading data...</div>;
+  
+  return (
+    <div style={{ width: '100%', height: 300 }}>
+      <h3>Garden Activity Monitoring</h3>
+      <LineChart data={data} width={600} height={250}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="day" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line type="monotone" dataKey="actualActivity" stroke="#4CAF50" name="Actual Activity" />
+        <Line type="monotone" dataKey="baselineActivity" stroke="#2196F3" name="Baseline" strokeDasharray="5 5" />
+      </LineChart>
+    </div>
+  );
+}
 
-1. Assemble the power management system
-   - Connect StampTimerPower to LiPo battery
-   - Verify 3.3V and 5V outputs
-
-2. Install the motion control system
-   - Mount servo in upper body
-   - Install push rod with ball joints
-   - Calibrate motion range
-
-3. Wire the LED and audio components
-   - Connect WS2812B LED rings with proper filtering
-   - Wire MAX98357A and speaker
-
-4. Connect the head and body using the magnetic pogo pins
-   - Ensure proper alignment
-   - Test connection reliability during motion
-
-5. Install the firmware
-
-See the [Build Plan](docs/planning/build_plan.md) for detailed assembly instructions.
-
-### Software Setup
-
-1. Clone this repository
-```bash
-git clone https://github.com/anh0001/esp32-owl-companion.git
+export default GardenActivityChart;
 ```
-
-2. Open the firmware project in Arduino IDE or PlatformIO
-```bash
-cd esp32-owl-companion/firmware/owl_main
-```
-
-3. Configure your board settings for ESP32-C3
-4. Upload the firmware to your M5Stamp C3U
-
-## Usage
-
-### Power Management
-
-The owl uses the StampTimerPower module for efficient power management:
-- Charges via USB-C with the TP4057 controller
-- BM8563 RTC for time-based functions and wake-up
-- Deep sleep capabilities for extended battery life
-- Battery protection circuit prevents over-discharge
-
-### Interaction Modes
-
-The owl has several interaction modes:
-- **Passive Mode**: Occasional eye blinking and head movement
-- **Alert Mode**: Responds to motion or sound with more active behaviors
-- **Interactive Mode**: Responds to touch or proximity
-- **Remote Mode**: Controlled via HTTP requests
-
-## Development
-
-### Adding Custom Sounds
-
-To add custom sounds:
-1. Convert your audio files to 8-bit, 16KHz WAV format
-2. Place them in the `docs/media/sounds` directory
-3. Update the sound references in `owl_hoot.h`
-
-### Modifying LED Patterns
-
-LED patterns are defined in the main firmware. You can create custom patterns by:
-1. Adding new pattern functions
-2. Registering them in the pattern scheduler
-
-### Power Optimization
-
-To optimize power consumption:
-1. Utilize the StampTimerPower's RTC wake-up functionality
-2. Implement deep sleep between interaction periods
-3. Use the voltage monitoring to protect the battery
-
-## Testing Procedures
-
-1. **Mechanical Tests**
-   - Verify smooth nodding motion
-   - Check for proper push rod alignment
-   - Test head balance and connector reliability
-
-2. **Electronic Tests**
-   - LED function through motion range
-   - Power stability during movement
-   - Audio quality verification
-   - Vibration motor function
-
-3. **Power Tests**
-   - Battery duration testing
-   - Charging functionality
-   - Voltage stability under load
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- M5Stack for the excellent ESP32 modules
-- The ESP32 community for libraries and examples
-- Contributors to this project
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
