@@ -168,7 +168,7 @@ curl -X POST \
   -d '{
     "angle": 15,
     "duration": 1000,
-    "immediate": true
+    "immediate": false
   }'
 ```
 
