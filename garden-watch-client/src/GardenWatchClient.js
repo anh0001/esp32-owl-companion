@@ -265,16 +265,10 @@ const GardenWatchClient = () => {
         </div>
         
         <div className="text-box">
-          <h4 className="bold-text">Mathematical Model Correlation:</h4>
-          <p>This chart implements Equation (5) from the paper, establishing a baseline activity pattern for garden engagement:</p>
-          <p className="code-block">B(t,w) = (1/N)∑A(d+7(w-1))(t)</p>
-          <p>Where:</p>
-          <ul className="list">
-            <li>B(t,w) is the baseline activity (blue dashed line)</li>
-            <li>A(d)(t) is the actual activity on day d during time t (green line)</li>
-          </ul>
-          <p className="mt-4">The declining pattern in weeks 3-4 triggers alerts according to Equation (8):</p>
-          <p className="code-block">Alert(d) = 1 if ∑S(d)(t) ≥ θA</p>
+          <h4 className="bold-text">Activity Pattern Monitoring:</h4>
+          <p>This chart shows how the system creates a baseline for each person by averaging their garden activities over time:</p>
+          <p>The baseline (blue dashed line) represents expected activity based on historical patterns. When actual activity (green line) falls significantly below this expected pattern, especially for consecutive days, the system can identify potential issues.</p>
+          <p className="text-box">The declining pattern in weeks 3-4 triggers alerts when activity deviation exceeds a predetermined threshold for several days.</p>
         </div>
       </div>
 
@@ -285,7 +279,7 @@ const GardenWatchClient = () => {
         
         <div className="grid-container">
           <div>
-            <h4 className="subtitle">Healthy Gardening Pattern</h4>
+            <h4 className="subtitle healthy-text">Healthy Gardening Pattern</h4>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyPatterns.healthy}>
@@ -298,11 +292,11 @@ const GardenWatchClient = () => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <p className="text-box">Regular garden engagement with morning watering (6-8am), midday plant checks (10am-12pm), and evening garden maintenance (5-7pm).</p>
+            <p className="small-text">Regular garden engagement with morning watering (6-8am), midday plant checks (10am-12pm), and evening garden maintenance (5-7pm).</p>
           </div>
           
           <div>
-            <h4 className="subtitle">Concerning Gardening Pattern</h4>
+            <h4 className="subtitle concerning-text">Concerning Gardening Pattern</h4>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyPatterns.current}>
@@ -316,15 +310,14 @@ const GardenWatchClient = () => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <p className="text-box">Significant reduction in garden engagement across all time periods, with unusual nighttime activity. This pattern may indicate physical limitations, cognitive changes, or sleep disturbances.</p>
+            <p className="small-text">Significant reduction in garden engagement across all time periods, with unusual nighttime activity. This pattern may indicate physical limitations, cognitive changes, or sleep disturbances.</p>
           </div>
         </div>
         <div className="info-box">
-          <h4 className="bold-text">Detection Algorithm Correlation:</h4>
-          <p>These patterns implement equations (1-4) from the paper, which detect human presence in the garden:</p>
-          <p className="code-block">H(i,j) = 1 if 22°C ≤ T(i,j) ≤ 31°C</p>
-          <p className="code-block">P = 1 if ∑∑C(i,j) ≥ θP</p>
-          <p>The system builds profiles of typical garden usage times and can detect unusual deviations like reduced morning activity or increased nighttime presence.</p>
+          <h4 className="bold-text">Privacy-Preserving Detection Method:</h4>
+          <p>The system uses low-resolution thermal sensors to detect human presence in the garden without capturing identifiable features:</p>
+          <p>When thermal readings fall within human body temperature range (22-31°C) and are confirmed by depth sensors, the system registers garden activity. This approach creates an accurate detection system while protecting privacy.</p>
+          <p>By analyzing patterns over time, the system identifies typical gardening routines and can detect meaningful changes like reduced morning activity or unusual nighttime presence.</p>
         </div>
       </div>
 
@@ -335,7 +328,7 @@ const GardenWatchClient = () => {
         
         <div className="grid-container">
           <div>
-            <h4 className="subtitle">Healthy Gardening Routine</h4>
+            <h4 className="subtitle healthy-text">Healthy Gardening Routine</h4>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyTaskData.healthy}>
@@ -350,7 +343,7 @@ const GardenWatchClient = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="text-box">
+            <div className="small-text">
               <p>Consistent engagement with gardening tasks throughout the week:</p>
               <ul className="list">
                 <li>Regular watering, pruning, and plant care</li>
@@ -361,7 +354,7 @@ const GardenWatchClient = () => {
           </div>
           
           <div>
-            <h4 className="subtitle">Concerning Gardening Routine</h4>
+            <h4 className="subtitle concerning-text">Concerning Gardening Routine</h4>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyTaskData.current}>
@@ -376,7 +369,7 @@ const GardenWatchClient = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="text-box">
+            <div className="small-text">
               <p>Significant reduction in gardening engagement:</p>
               <ul className="list">
                 <li>Minimal or skipped watering routines</li>
@@ -387,10 +380,9 @@ const GardenWatchClient = () => {
           </div>
         </div>
         <div className="info-box">
-          <h4 className="bold-text">Correlation to Pattern Recognition Algorithm:</h4>
-          <p>This visualization demonstrates how the baseline calculation from equation (5) is applied to different types of garden activities:</p>
-          <p className="code-block">B(t,w) = (1/N)∑A(d+7(w-1))(t)</p>
-          <p>Significant deviations in task completion and garden time can trigger wellness checks through equation (11).</p>
+          <h4 className="bold-text">Task Completion Analysis:</h4>
+          <p>This visualization demonstrates how the system tracks different types of garden activities over time to establish personal baselines.</p>
+          <p>The system calculates expected activity levels for each day of the week based on historical patterns. When task completion and garden time fall significantly below these personalized expectations, the system can trigger wellness checks.</p>
         </div>
       </div>
 
@@ -414,16 +406,13 @@ const GardenWatchClient = () => {
         </div>
         
         <div className="text-box">
-          <h4 className="bold-text">Deviation Score Calculation:</h4>
-          <p>The system calculates deviation scores using Equation (7) from the paper:</p>
-          <p className="code-block">S(d)(t) = |A(d)(t)-B(t,w)|/(σ(t,w)+ε)</p>
-          <p>Where:</p>
+          <h4 className="bold-text">Personalized Deviation Analysis:</h4>
+          <p>The system measures how much a person's current garden activity differs from their established patterns:</p>
+          <p>The deviation score (red line) represents the difference between actual activity and expected activity, normalized by the typical variation in that person's routine. This creates a personalized measurement that accounts for individual habits.</p>
           <ul className="list">
-            <li>S(d)(t) is the deviation score (red line)</li>
-            <li>A(d)(t) is the actual activity</li>
-            <li>B(t,w) is the baseline activity</li>
-            <li>σ(t,w) is the standard deviation of activity</li>
-            <li>ε is a small value to prevent division by zero</li>
+            <li>Lower scores indicate normal variation in activity</li>
+            <li>Higher scores suggest unusual changes that may warrant attention</li>
+            <li>The system accounts for natural day-to-day fluctuations in activity</li>
           </ul>
           <p className="italic-text">Scores above the alert threshold trigger wellness checks, as they may indicate health issues.</p>
         </div>
@@ -449,11 +438,10 @@ const GardenWatchClient = () => {
         </div>
         
         <div className="text-box">
-          <h4 className="bold-text">User Interaction Model:</h4>
-          <p>This chart implements the user interaction algorithms from Equations (9-11) in the paper:</p>
-          <p className="code-block">R(plant)(d,t) = 1 if (d mod f(plant)) = 0 and t = t(plant)</p>
-          <p className="code-block">M(t) = M(wellness) if response time > threshold</p>
-          <p>The increasing response times in weeks 3-4 trigger wellness interaction mode (M(wellness)), prompting the owl to check on the elderly user.</p>
+          <h4 className="bold-text">Adaptive Reminder System:</h4>
+          <p>This chart shows how the owl's behavior adapts based on the user's response patterns:</p>
+          <p>The system provides plant care reminders based on each plant's specific needs and optimal care schedule. When response times to these reminders increase significantly (as seen in weeks 3-4), the owl switches to a wellness check mode.</p>
+          <p>This adaptive approach allows for non-intrusive monitoring that respects the user's autonomy while still providing support when needed.</p>
         </div>
       </div>
 
@@ -465,9 +453,8 @@ const GardenWatchClient = () => {
           <div>
             <h4 className="subtitle">Activity Monitoring</h4>
             <p>The system uses passive infrared sensing to detect presence in the garden:</p>
-            <div className="code-block">
-              H(i,j) = 1 if 22°C ≤ T(i,j) ≤ 31°C<br/>
-              P = 1 if ∑∑C(i,j) ≥ θP
+            <div className="info-box">
+              The sensors identify human presence when temperature readings fall within the body temperature range (22-31°C) and depth sensors confirm an object is within detection range. Multiple detection points must be activated to register a valid presence.
             </div>
             <p>This allows tracking garden engagement while preserving privacy.</p>
           </div>
@@ -475,9 +462,8 @@ const GardenWatchClient = () => {
           <div>
             <h4 className="subtitle">Pattern Recognition</h4>
             <p>The system establishes personalized baselines and detects deviations:</p>
-            <div className="code-block">
-              B(t,w) = (1/N)∑A(d+7(w-1))(t)<br/>
-              S(d)(t) = |A(d)(t)-B(t,w)|/(σ(t,w)+ε)
+            <div className="info-box">
+              By tracking patterns over several weeks, the system creates a personalized activity baseline for each time period and day of the week. Deviations are measured relative to this baseline and weighted by the person's typical variability, creating a highly personalized monitoring approach.
             </div>
             <p>These algorithms can detect changes up to 11 days before adverse health events.</p>
           </div>
