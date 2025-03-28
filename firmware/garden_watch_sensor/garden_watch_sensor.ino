@@ -23,7 +23,7 @@
 #include <time.h>
 
 // WiFi credentials
-const char* ssid = "TLLMS";
+const char* ssid = "iicx_705";
 const char* password = "mobimobi";
 
 // Owl robot API endpoint

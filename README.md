@@ -21,7 +21,7 @@ The owl is designed with a detachable head that connects via magnetic pogo pins,
 The project uses the following main components:
 - **M5Stamp C3U**: ESP32-C3 RISC-V MCU controller module with Wi-Fi
 - **StampTimerPower**: Power management module with battery charging, RTC, and power control
-- **WS2812B LED Rings**: 8-LED 5V rings for the owl's eyes
+- **WS2812B LED Rings** (optional): 8-LED 5V rings for the owl's eyes
 - **MAX98357A Amplifier**: I2S audio amplifier for the speaker
 - **28mm Speaker**: For sound output
 - **Vibration Motor**: DC 3V-6V, 32mA for haptic feedback
@@ -58,7 +58,7 @@ The system uses a dual voltage design (3.3V and 5V) with the following subsystem
 - Battery protection circuit
 
 ### Head Section
-- WS2812B LED rings powered by 5V
+- WS2812B LED rings powered by 5V (optional component, can be omitted if visual feedback is not needed)
 - 4-pin magnetic pogo connector:
   - Pin 1: 5V (LED power)
   - Pin 2: GND (Common ground)
@@ -74,7 +74,7 @@ The system uses a dual voltage design (3.3V and 5V) with the following subsystem
 ### GPIO Assignment
 ```
 ESP32-C3 GPIO Mapping:
-GPIO2  → LED Ring Data (3.3V)
+GPIO2  → LED Ring Data (3.3V) [Optional - only if LED rings are installed]
 GPIO6  → I2S BCLK
 GPIO7  → I2S LRCLK
 GPIO8  → I2S DIN
@@ -88,27 +88,104 @@ GPIO10 → Servo Control
 
 ![System Diagram](schematics/system-diagram.svg)
 
-## Control System
+## API Endpoints
 
-The owl features an HTTP-based control system:
+The owl robot provides a RESTful API for monitoring and sensor data integration:
 
-1. **Status Check Request**
-   - Device polls server every 5 seconds to check if action should be triggered
-   - `GET http://54.250.108.126/getConfig.php?configKey=owl_motor`
+### API Endpoint Overview
 
-2. **Action Trigger**
-   - When value is "true", the owl executes programmed behaviors for 20 seconds:
-     - Nodding head movement
-     - LED eye patterns
-     - Sound playback sequence
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Root endpoint that confirms server is running |
+| `/api/status` | GET | Returns owl robot status including battery level and alert state |
+| `/api/hourly-data` | POST | Receives hourly activity data from sensor modules |
 
-3. **Flag Reset**
-   - Device immediately sends request to reset the flag to false
-   - `GET http://54.250.108.126/setConfig.php?configKey=owl_motor&configValue=false`
+### Testing the API
 
-4. **External Activation**
-   - Any system can remotely trigger the owl by setting the flag to "true"
-   - `GET http://54.250.108.126/setConfig.php?configKey=owl_motor&configValue=true`
+You can test the API endpoints using curl or other HTTP tools. Below are examples using curl:
+
+#### 1. Testing Root Endpoint
+
+Verify the web server is running:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/
+```
+
+Example response:
+```
+Garden Watch Owl Robot
+```
+
+#### 2. Testing Status Endpoint
+
+Get the current status of the owl robot:
+
+```bash
+curl http://[OWL_IP_ADDRESS]/api/status
+```
+
+Example response:
+```json
+{
+  "status": "online",
+  "batteryVoltage": 3.85,
+  "recentActivity": 0.75,
+  "alertActive": false
+}
+```
+
+#### 3. Testing Hourly Data Endpoint
+
+Send simulated hourly activity data:
+
+```bash
+curl -X POST \
+  http://[OWL_IP_ADDRESS]/api/hourly-data \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "timestamp": "2025-03-28 14:30:00",
+    "hour": 14,
+    "day": 5,
+    "detectionCount": 12,
+    "totalReadings": 15,
+    "maxDetectionPoints": 8,
+    "avgDetectionPoints": 3.5,
+    "presenceRatio": 0.8
+  }'
+```
+
+#### Hourly Data Payload Fields Description
+
+The `/api/hourly-data` endpoint accepts a JSON payload with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | string | ISO formatted date and time when the hour period started |
+| `hour` | integer | Hour of day (0-23) of the data collection period |
+| `day` | integer | Day of week (0=Sunday, 1=Monday, ..., 6=Saturday) |
+| `detectionCount` | integer | Number of readings that detected human presence |
+| `totalReadings` | integer | Total number of sensor readings taken during the hour |
+| `maxDetectionPoints` | integer | Maximum number of detection points recorded in any single reading |
+| `avgDetectionPoints` | float | Average number of detection points across all readings |
+| `presenceRatio` | float | Ratio of readings with detected presence to total readings (0.0-1.0) |
+
+Example response:
+```json
+{
+  "status": "ok"
+}
+```
+
+### API Troubleshooting
+
+If you encounter issues testing the API:
+
+1. **Verify connectivity**: Ensure both your computer and the owl robot are on the same network
+2. **Check logs**: Monitor the Serial output for error messages
+3. **Confirm IP address**: Make sure you're using the correct IP address (printed at startup)
+4. **Firewall issues**: Check if a firewall is blocking the connection
+5. **Reset the device**: Try restarting the owl robot if the web server becomes unresponsive
 
 ## Getting Started
 

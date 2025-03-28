@@ -51,6 +51,10 @@
 #include <vector>
 #include <math.h>
 
+// New WiFi credentials & HTTP configuration
+const char* ssid = "iicx_705";
+const char* password = "mobimobi";
+
 // Define pins
 #define LED_PIN 2
 #define SERVO_PIN 10
@@ -98,10 +102,6 @@
 #define MOVEMENT_INTERVAL 5000   // Time between movement sequences
 #define RUFFLE_DURATION 200      // Duration of each ruffle vibration
 #define RUFFLE_PAUSE 300        // Pause between ruffles
-
-// New WiFi credentials & HTTP configuration
-const char* ssid = "TLLMS";
-const char* password = "mobimobi";
 
 // Global variables for HTTP polling and action mode
 bool performAction = false;
@@ -392,6 +392,8 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nWiFi connected.");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
   
   // Set up MOTOR_PIN as an output for digital vibration control.
   pinMode(MOTOR_PIN, OUTPUT);
