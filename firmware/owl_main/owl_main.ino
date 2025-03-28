@@ -45,8 +45,11 @@
 #include "owl_hoot.h"   // GENERATED using: xxd -i owl_hooting.wav > owl_hoot.h
 
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WebServer.h>
+#include <time.h>
+#include <vector>
+#include <math.h>
 
 // Define pins
 #define LED_PIN 2
@@ -99,7 +102,6 @@
 // New WiFi credentials & HTTP configuration
 const char* ssid = "TLLMS";
 const char* password = "mobimobi";
-#define CONFIG_URL "http://54.250.108.126/getConfig.php?configKey=owl_motor"
 
 // Global variables for HTTP polling and action mode
 bool performAction = false;
@@ -124,6 +126,139 @@ unsigned long lastInteractionTime = 0;
 
 // Add voltage checking variable
 unsigned long lastVoltageCheck = 0;
+
+// New global web server and activity tracking definitions
+WebServer server(80);
+#define HOURS_PER_DAY 24
+#define DAYS_PER_WEEK 7
+#define DEVIATION_ALERT_THRESHOLD 1.5
+#define BASELINE_HISTORY_WEEKS 4
+
+struct HourlyActivity {
+  time_t timestamp;
+  uint8_t hour;
+  uint8_t day;
+  uint8_t detectionCount;
+  uint8_t totalReadings;
+  uint8_t maxDetectionPoints;
+  float avgDetectionPoints;
+  float presenceRatio;
+};
+
+std::vector<HourlyActivity> activityHistory;
+float baselineActivity[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
+float activityStdDev[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
+
+void initializeActivityTracking() {
+  for (int day = 0; day < DAYS_PER_WEEK; day++) {
+    for (int hour = 0; hour < HOURS_PER_DAY; hour++) {
+      baselineActivity[day][hour] = 0.5;
+      activityStdDev[day][hour] = 0.2;
+    }
+  }
+}
+
+void handleHourlyData() {
+  if (server.hasArg("plain")) {
+    String body = server.arg("plain");
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    if (!error) {
+      HourlyActivity activity;
+      activity.hour = doc["hour"];
+      activity.day = doc["day"];
+      activity.detectionCount = doc["detectionCount"];
+      activity.totalReadings = doc["totalReadings"];
+      activity.maxDetectionPoints = doc["maxDetectionPoints"];
+      activity.avgDetectionPoints = doc["avgDetectionPoints"];
+      activity.presenceRatio = doc["presenceRatio"];
+      const char* timestampStr = doc["timestamp"];
+      struct tm tm = {0};
+      strptime(timestampStr, "%Y-%m-%d %H:%M:%S", &tm);
+      activity.timestamp = mktime(&tm);
+      
+      // Process activity: add to history and update baseline
+      activityHistory.push_back(activity);
+      if (activityHistory.size() > HOURS_PER_DAY * DAYS_PER_WEEK * BASELINE_HISTORY_WEEKS) {
+        activityHistory.erase(activityHistory.begin());
+      }
+      
+      // First pass: calculate means
+      int dayHourCount[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
+      float dayHourSum[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
+      for (const auto& act : activityHistory) {
+        dayHourCount[act.day][act.hour]++;
+        dayHourSum[act.day][act.hour] += act.presenceRatio;
+      }
+      for (int d = 0; d < DAYS_PER_WEEK; d++) {
+        for (int h = 0; h < HOURS_PER_DAY; h++) {
+          if (dayHourCount[d][h] > 0) {
+            float newValue = dayHourSum[d][h] / dayHourCount[d][h];
+            baselineActivity[d][h] = baselineActivity[d][h] * 0.8 + newValue * 0.2;
+          }
+        }
+      }
+      
+      // Second pass: calculate standard deviations
+      float sumSquaredDiff[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
+      for (const auto& act : activityHistory) {
+        float diff = act.presenceRatio - baselineActivity[act.day][act.hour];
+        sumSquaredDiff[act.day][act.hour] += diff * diff;
+      }
+      for (int d = 0; d < DAYS_PER_WEEK; d++) {
+        for (int h = 0; h < HOURS_PER_DAY; h++) {
+          if (dayHourCount[d][h] > 1) {
+            float variance = sumSquaredDiff[d][h] / dayHourCount[d][h];
+            activityStdDev[d][h] = sqrt(variance);
+            if (activityStdDev[d][h] < 0.05) {
+              activityStdDev[d][h] = 0.05;
+            }
+          }
+        }
+      }
+      
+      // Calculate deviation for this activity
+      uint8_t d = activity.day, h = activity.hour;
+      float deviation = fabs(activity.presenceRatio - baselineActivity[d][h]) / activityStdDev[d][h];
+      if (deviation >= DEVIATION_ALERT_THRESHOLD) {
+        Serial.print("Significant deviation detected: ");
+        Serial.println(deviation);
+        performAction = true;
+        actionStartTime = millis();
+      }
+      Serial.print("Processed hour data: Day ");
+      Serial.print(activity.day);
+      Serial.print(", Hour ");
+      Serial.print(activity.hour);
+      Serial.print(", Presence ");
+      Serial.print(activity.presenceRatio * 100);
+      Serial.print("%, Deviation ");
+      Serial.println(deviation);
+      
+      server.send(200, "application/json", "{\"status\":\"ok\"}");
+    } else {
+      server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+    }
+  } else {
+    server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"No data received\"}");
+  }
+}
+
+void setupServer() {
+  server.on("/", HTTP_GET, []() {
+    server.send(200, "text/plain", "Garden Watch Owl Robot");
+  });
+  server.on("/api/hourly-data", HTTP_POST, handleHourlyData);
+  server.on("/api/status", HTTP_GET, []() {
+    String status = "{ \"status\": \"online\", ";
+    status += "\"batteryVoltage\": " + String(getBatteryVoltage()) + ", ";
+    status += "\"recentActivity\": " + String(activityHistory.size() > 0 ? activityHistory.back().presenceRatio : 0) + ", ";
+    status += "\"alertActive\": " + String(performAction ? "true" : "false") + " }";
+    server.send(200, "application/json", status);
+  });
+  server.begin();
+  Serial.println("HTTP server started");
+}
 
 // Function to initialize I2S
 void initI2S() {
@@ -236,48 +371,6 @@ void updateBatteryLED() {
   led.show();
 }
 
-// New function to check HTTP configuration
-bool checkOwlMotorConfig() {
-  HTTPClient http;
-  http.begin(CONFIG_URL);
-  int httpCode = http.GET();
-
-  if (httpCode > 0) {  // Successful request
-    String payload = http.getString();
-    StaticJsonDocument<200> doc;
-    DeserializationError error = deserializeJson(doc, payload);
-    if (!error) {
-      const char* value = doc["value"];
-      if (strcmp(value, "true") == 0) {
-        // End the current HTTP connection
-        http.end();
-        
-        // Immediately set the config value to false
-        HTTPClient httpSet;
-        httpSet.begin("http://54.250.108.126/setConfig.php?configKey=owl_motor&configValue=false");
-        int httpCodeSet = httpSet.GET();
-        if (httpCodeSet > 0) {
-          Serial.println("Config reset to false.");
-        } else {
-          Serial.print("Failed to reset config, error: ");
-          Serial.println(httpSet.errorToString(httpCodeSet));
-        }
-        httpSet.end();
-        
-        return true;
-      }
-    } else {
-      Serial.print("JSON Parse Error: ");
-      Serial.println(error.c_str());
-    }
-  } else {
-    Serial.print("HTTP GET failed, error: ");
-    Serial.println(http.errorToString(httpCode));
-  }
-  http.end();
-  return false;
-}
-
 void setup() {
   Serial.begin(115200);
   
@@ -328,23 +421,20 @@ void setup() {
   
   // Trigger welcome vibration (blocking for duration)
   startVibration(VIBRATE_SHORT);
+
+  // Initialize time via NTP
+  configTime(0, 0, "pool.ntp.org");
+  initializeActivityTracking();
+  setupServer();
 }
 
 void loop() {
+  server.handleClient();
+  
   static unsigned long lastNodStart = 0;
   static unsigned long lastBatteryCheck = 0;
   static unsigned long lastMovementTime = 0;
   unsigned long currentTime = millis();
-  
-  // Periodic HTTP configuration check
-  if (currentTime - lastHttpCheck >= HTTP_CHECK_INTERVAL) {
-    lastHttpCheck = currentTime;
-    if (checkOwlMotorConfig()) {
-      performAction = true;
-      actionStartTime = currentTime;
-      Serial.println("Action mode activated for 60 seconds.");
-    }
-  }
   
   // Execute owl actions only during active action period
   if (performAction) {
