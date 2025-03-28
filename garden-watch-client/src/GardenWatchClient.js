@@ -183,7 +183,7 @@ const GardenWatchClient = () => {
       setError('Failed to fetch data from the Garden Watch system. Please check the connection and try again.');
       setLoading(false);
     }
-  }, [generateGardenActivityData, generateDailyActivityData, generateWeeklyGardeningData, generateReminderData, owlIp]);
+  }, [generateGardenActivityData, generateDailyActivityData, generateWeeklyGardeningData, generateReminderData]);
   
   // Fetch data on component mount and when owl IP changes
   useEffect(() => {
@@ -191,7 +191,7 @@ const GardenWatchClient = () => {
     // In a real app, you might want to set up a refresh interval
     // const interval = setInterval(fetchData, 60000); // Refresh every minute
     // return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, owlIp]);
   
   // Handle form submission for IP address
   const handleSubmit = (e) => {
