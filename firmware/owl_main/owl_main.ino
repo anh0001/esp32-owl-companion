@@ -158,6 +158,11 @@ void initializeActivityTracking() {
   }
 }
 
+/**
+ * Processes hourly data received via HTTP POST.
+ * Parses the JSON payload to update activity history and calculate baseline metrics.
+ * If the deviation from baseline exceeds the threshold, action mode is triggered.
+ */
 void handleHourlyData() {
   if (server.hasArg("plain")) {
     String body = server.arg("plain");
@@ -177,12 +182,11 @@ void handleHourlyData() {
       strptime(timestampStr, "%Y-%m-%d %H:%M:%S", &tm);
       activity.timestamp = mktime(&tm);
       
-      // Process activity: add to history and update baseline
+      // Process activity history and update baseline values
       activityHistory.push_back(activity);
       if (activityHistory.size() > HOURS_PER_DAY * DAYS_PER_WEEK * BASELINE_HISTORY_WEEKS) {
         activityHistory.erase(activityHistory.begin());
       }
-      
       // First pass: calculate means
       int dayHourCount[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
       float dayHourSum[DAYS_PER_WEEK][HOURS_PER_DAY] = {0};
@@ -217,7 +221,6 @@ void handleHourlyData() {
         }
       }
       
-      // Calculate deviation for this activity
       uint8_t d = activity.day, h = activity.hour;
       float deviation = fabs(activity.presenceRatio - baselineActivity[d][h]) / activityStdDev[d][h];
       if (deviation >= DEVIATION_ALERT_THRESHOLD) {
@@ -226,6 +229,13 @@ void handleHourlyData() {
         performAction = true;
         actionStartTime = millis();
       }
+      // Optional: Uncomment to trigger an emergency alert for unusual high activity spikes
+      /*
+      if (activity.maxDetectionPoints > 20) {
+        Serial.println("Emergency alert: unusual activity detected");
+        // Implement immediate alert handling here
+      }
+      */
       Serial.print("Processed hour data: Day ");
       Serial.print(activity.day);
       Serial.print(", Hour ");
