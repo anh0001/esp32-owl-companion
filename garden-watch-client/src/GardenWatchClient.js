@@ -136,46 +136,42 @@ const GardenWatchClient = () => {
     setError(null);
     
     try {
-      // For demo purposes, we'll use sample data to avoid requiring the actual hardware
-      // In a real implementation, you would uncomment these and use the actual API endpoints
-      
-      // const activityResponse = await fetch(`http://${owlIp}/api/data/activity`);
-      // const activityData = await activityResponse.json();
-      // setGardenActivityData(activityData);
-      
-      // const patternsResponse = await fetch(`http://${owlIp}/api/data/daily-patterns`);
-      // const patternsData = await patternsResponse.json();
-      // setDailyPatterns(patternsData);
-      
-      // const weeklyResponse = await fetch(`http://${owlIp}/api/data/weekly-tasks`);
-      // const weeklyData = await weeklyResponse.json();
-      // setWeeklyTaskData(weeklyData);
-      
-      // const deviationResponse = await fetch(`http://${owlIp}/api/data/deviation`);
-      // const deviationData = await deviationResponse.json();
-      // setDeviationData(deviationData);
-      
-      // const reminderResponse = await fetch(`http://${owlIp}/api/data/reminders`);
-      // const reminderData = await reminderResponse.json();
-      // setReminderData(reminderData);
-      
-      // For demo, we'll generate sample data similar to what the API would return
-      const activityData = generateGardenActivityData();
+      const activityResponse = await fetch(`http://${owlIp}/api/data/activity`);
+      const activityData = await activityResponse.json();
       setGardenActivityData(activityData);
-      setDailyPatterns({
-        healthy: generateDailyActivityData(true),
-        current: generateDailyActivityData(false)
-      });
-      setWeeklyTaskData({
-        healthy: generateWeeklyGardeningData(true),
-        current: generateWeeklyGardeningData(false)
-      });
-      setDeviationData(activityData.map(item => ({
-        day: item.day,
-        deviationScore: item.deviationScore,
-        alert: item.alert
-      })));
-      setReminderData(generateReminderData());
+      
+      const patternsResponse = await fetch(`http://${owlIp}/api/data/daily-patterns`);
+      const patternsData = await patternsResponse.json();
+      setDailyPatterns(patternsData);
+      
+      const weeklyResponse = await fetch(`http://${owlIp}/api/data/weekly-tasks`);
+      const weeklyData = await weeklyResponse.json();
+      setWeeklyTaskData(weeklyData);
+      
+      const deviationResponse = await fetch(`http://${owlIp}/api/data/deviation`);
+      const deviationData = await deviationResponse.json();
+      setDeviationData(deviationData);
+      
+      const reminderResponse = await fetch(`http://${owlIp}/api/data/reminders`);
+      const reminderData = await reminderResponse.json();
+      setReminderData(reminderData);
+      
+    //   const activityData = generateGardenActivityData();
+    //   setGardenActivityData(activityData);
+    //   setDailyPatterns({
+    //     healthy: generateDailyActivityData(true),
+    //     current: generateDailyActivityData(false)
+    //   });
+    //   setWeeklyTaskData({
+    //     healthy: generateWeeklyGardeningData(true),
+    //     current: generateWeeklyGardeningData(false)
+    //   });
+    //   setDeviationData(activityData.map(item => ({
+    //     day: item.day,
+    //     deviationScore: item.deviationScore,
+    //     alert: item.alert
+    //   })));
+    //   setReminderData(generateReminderData());
       
       setLoading(false);
     } catch (err) {
